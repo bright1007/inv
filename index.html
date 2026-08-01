@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>XAU 트레이딩 대시보드</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; padding: 16px 14px 60px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    background: #f4f3ef; color: #1a1a18;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: #6b6a64; margin: 0 0 18px; line-height: 1.5; }
+
+  .page-tabs { max-width: 960px; margin: 0 auto 14px; display: flex; gap: 6px; }
+  .page-tab {
+    flex: 1; padding: 11px 4px; font-size: 13.5px; font-weight: 600;
+    background: #ece9e0; color: #6b6a64; border: none; border-radius: 10px; cursor: pointer;
+  }
+  .page-tab.active { background: #fff; color: #1a1a18; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+
+  .price-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  @media (max-width: 640px) { .price-grid { grid-template-columns: 1fr; } }
+  .price-card { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:14px; text-align:center; }
+  .price-label { font-size:12px; color:#8a887f; margin:0 0 6px; }
+  .price-value { font-size:22px; font-weight:700; margin:0; }
+  .price-updated { font-size:10.5px; color:#b8b6ac; margin:6px 0 0; }
+
+  .top-actions { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+  .reset-btn {
+    display:inline-flex; align-items:center; gap:6px; font-size:13.5px; padding:10px 16px;
+    background:#fff; border:1px solid #d9d7cd; border-radius:8px; cursor:pointer;
+  }
+  .reset-btn:active { background:#f2f1ec; }
+
+  .chart-card { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:12px; margin-bottom:14px; }
+  .chart-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
+  .chart-title { font-size:15px; font-weight:700; margin:0; }
+  .chart-readout { font-size:11.5px; color:#6b6a64; font-family: ui-monospace, Menlo, monospace; }
+  .mt4-canvas { width:100%; display:block; border-radius:8px; background:#fff; }
+
+  .rec-buy { color:#c0392b; }
+  .rec-sell { color:#1a8754; }
+  .rec-neutral { color:#8a887f; }
+
+  .cascade { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:6px 16px; margin-bottom:12px; }
+  .step-row { display:flex; align-items:flex-start; gap:10px; padding:12px 0; border-bottom:1px solid #f0efe9; }
+  .step-row:last-child { border-bottom:none; }
+  .step-num { flex-shrink:0; width:26px; height:26px; border-radius:50%; background:#ece9e0; color:#6b6a64;
+    font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-top:1px; }
+  .step-num.pass { background:#e1f5ee; color:#0f6e56; }
+  .step-num.fail { background:#faece7; color:#993c1d; }
+  .step-body { flex:1; }
+  .step-title { font-size:13.5px; font-weight:600; margin:0 0 2px; }
+  .step-detail { font-size:12.5px; color:#6b6a64; line-height:1.5; margin:0; }
+  .step-status { flex-shrink:0; font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px;
+    background:#ece9e0; color:#6b6a64; white-space:nowrap; margin-top:2px; }
+  .step-status.pass { background:#e1f5ee; color:#0f6e56; }
+  .step-status.fail { background:#faece7; color:#993c1d; }
+  .step-status.wait { background:#fdf3e0; color:#b8860b; }
+
+  .summary { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:18px 20px; }
+  .summary .label { font-size:12px; color:#8a887f; margin:0 0 6px; }
+  .final-verdict { font-size:19px; font-weight:700; margin:0; line-height:1.45; }
+  .scalp-text { font-size:14px; line-height:1.6; margin:0; }
+  .disclaimer { font-size:11px; color:#a8a69c; margin-top:20px; line-height:1.6; }
+
+  /* ---- 2페이지: 수동 분석기 ---- */
+  .batch-upload { background:#fff; border:1.5px dashed #b9b6a8; border-radius:12px; padding:16px;
+    text-align:center; position:relative; margin-bottom:16px; display:block; }
+  .batch-upload input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .batch-upload .title { font-size:14px; font-weight:600; margin:4px 0 2px; }
+  .batch-upload .desc { font-size:12px; color:#8a887f; margin:0; }
+  .tf-grid { display:grid; grid-template-columns:1fr; gap:12px; margin-bottom:16px; }
+  @media (min-width:760px) { .tf-grid { grid-template-columns:repeat(3,1fr); } }
+  .tf-card { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:14px; }
+  .tf-card h3 { font-size:15px; font-weight:600; margin:0 0 10px; display:flex; align-items:center; justify-content:space-between; }
+  .tf-badge { font-size:11px; font-weight:500; padding:3px 9px; border-radius:20px; background:#ece9e0; color:#6b6a64; }
+  .tf-badge.filled { background:#e1f5ee; color:#0f6e56; }
+  .upload-box { border:1.5px dashed #cfccc0; border-radius:10px; padding:10px; text-align:center; cursor:pointer;
+    margin-bottom:12px; position:relative; min-height:100px; display:flex; align-items:center; justify-content:center;
+    background:#fafaf7; overflow:hidden; }
+  .upload-box input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  .upload-box .placeholder { font-size:12px; color:#9c9a90; line-height:1.5; }
+  .upload-box img { max-width:100%; max-height:230px; border-radius:6px; display:block; }
+  .clear-img { margin:-6px 0 10px; font-size:12px; color:#a44; background:none; border:none; cursor:pointer;
+    text-decoration:underline; padding:6px 0; display:none; width:100%; }
+  .stoch-block { margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid #f0efe9; }
+  .stoch-block:last-child { border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .stoch-label { font-size:12px; font-weight:600; color:#52504a; margin-bottom:4px; }
+  .input-row { display:flex; gap:6px; margin-bottom:6px; }
+  .input-row input { width:50%; padding:10px 6px; font-size:15px; border:1px solid #d9d7cd; border-radius:8px;
+    text-align:center; background:#fff; }
+  .input-row input::placeholder { color:#b8b6ac; font-size:12px; }
+  .mini-row { display:flex; gap:4px; border-top:1px solid #f0efe9; padding-top:6px; margin-top:2px; }
+  .mini-cell { flex:1; text-align:center; background:#fafaf7; border-radius:6px; padding:4px 2px; }
+  .mini-label { display:block; font-size:10px; color:#8a887f; margin-bottom:2px; }
+  .mini-val { display:block; font-size:13px; font-weight:700; }
+
+  /* ---- 3페이지: 단계 ---- */
+  .param-card { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .param-row { display:flex; gap:10px; flex-wrap:wrap; }
+  .param-field { flex:1; min-width:120px; }
+  .param-field span { display:block; font-size:11.5px; color:#8a887f; margin-bottom:4px; }
+  .param-field input { width:100%; padding:9px 8px; font-size:14px; border:1px solid #d9d7cd;
+    border-radius:8px; text-align:center; background:#fff; }
+  .stage-now { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:16px 18px; margin-bottom:14px; }
+  .stage-now .big { font-size:24px; font-weight:700; margin:4px 0 6px; }
+  .stage-now .sub { font-size:13px; color:#6b6a64; line-height:1.6; margin:0; }
+  .table-wrap { background:#fff; border:1px solid #e4e2da; border-radius:12px; padding:6px 10px 10px; overflow-x:auto; }
+  table.stage { width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+  table.stage th { text-align:right; padding:9px 6px; color:#8a887f; font-weight:600; border-bottom:1px solid #e4e2da;
+    white-space:nowrap; font-size:11.5px; }
+  table.stage th:first-child, table.stage td:first-child { text-align:center; }
+  table.stage td { text-align:right; padding:9px 6px; border-bottom:1px solid #f4f2ec; white-space:nowrap;
+    font-variant-numeric: tabular-nums; }
+  table.stage tr.current { background:#fdf6e6; }
+  table.stage tr.current td { font-weight:700; }
+  table.stage tr.done td:first-child::after { content:' ✓'; color:#1a8754; }
+  .risk-warn { color:#993c1d; }
+  .risk-ok { color:#1a8754; }
+</style>
+</head>
+<body>
+
+<div class="page-tabs">
+  <button class="page-tab active" id="tab-1" onclick="showPage(1)">자동 차트</button>
+  <button class="page-tab" id="tab-2" onclick="showPage(2)">사진 분석</button>
+  <button class="page-tab" id="tab-3" onclick="showPage(3)">나의 단계</button>
+</div>
+
+<!-- ============ 1페이지 ============ -->
+<div class="page" id="page-1">
+<div class="wrap">
+  <h1>실시간 자동 분석</h1>
+  <p class="subtitle">실시간 시세를 받아 5M / 15M / 1H 차트와 Stoch(8,3,3)·Stoch(12,3,12)를 자동으로 그리고, 1H(추세) → 15M(셋업) → 5M(타점) 순서로 매매 조건을 판정합니다.</p>
+
+  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;flex-wrap:wrap;gap:6px;">
+    <span style="font-size:13px;color:#6b6a64;">현재 시각</span>
+    <span id="live-clock" style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;">-</span>
+  </div>
+
+  <div class="price-grid">
+    <div class="price-card">
+      <p class="price-label">XAU/USD (금)</p>
+      <p class="price-value" id="price-gold">불러오는 중…</p>
+      <p class="price-updated" id="price-gold-updated"></p>
+    </div>
+    <div class="price-card">
+      <p class="price-label">USD/KRW</p>
+      <p class="price-value" id="price-krw">-</p>
+      <p class="price-updated" id="price-krw-updated"></p>
+    </div>
+    <div class="price-card">
+      <p class="price-label">USD/CNY (인민폐)</p>
+      <p class="price-value" id="price-cny">-</p>
+      <p class="price-updated" id="price-cny-updated"></p>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <button class="reset-btn" onclick="fetchAndUpdate()">↻ 지금 새로고침</button>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;color:#6b6a64;">
+      <input type="checkbox" id="auto-refresh-toggle" onchange="toggleAutoRefresh()"> 5분마다 자동 새로고침
+    </label>
+    <span id="load-status" style="font-size:12px;color:#8a887f;"></span>
+  </div>
+
+  <div id="charts"></div>
+
+  <div class="cascade">
+    <div class="step-row">
+      <div class="step-num" id="stepnum-1">1</div>
+      <div class="step-body">
+        <p class="step-title">1H 방향 필터 (추세)</p>
+        <p class="step-detail" id="step1-detail">데이터를 불러오는 중…</p>
+      </div>
+      <div class="step-status" id="step1-status">대기</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num" id="stepnum-2">2</div>
+      <div class="step-body">
+        <p class="step-title">15M 셋업 확인</p>
+        <p class="step-detail" id="step2-detail">1단계가 먼저 통과해야 확인합니다.</p>
+      </div>
+      <div class="step-status" id="step2-status">대기</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num" id="stepnum-3">3</div>
+      <div class="step-body">
+        <p class="step-title">5M 정밀 타점</p>
+        <p class="step-detail" id="step3-detail">2단계가 먼저 통과해야 확인합니다.</p>
+      </div>
+      <div class="step-status" id="step3-status">대기</div>
+    </div>
+  </div>
+
+  <div class="summary" style="margin-bottom:12px;">
+    <p class="label">15M 단기 매매 기회 (참고용 — 1H 추세와 반대일 수 있음)</p>
+    <p class="scalp-text" id="scalp-signal">-</p>
+  </div>
+
+  <div class="summary">
+    <p class="label">최종 판단</p>
+    <p class="final-verdict" id="final-verdict">-</p>
+  </div>
+
+  <p class="disclaimer">
+    ※ 데이터 출처: xaus.com (API 키 불필요, 무료). 최근 48시간치 2분 간격 시세로 캔들을 구성하므로 MT4 실제 차트와 미세한 차이가 있을 수 있습니다.<br>
+    ※ 투자자문이 아니며 참고용 계산 결과입니다. 매매 판단과 책임은 본인에게 있습니다.
+  </p>
+</div>
+</div>
+
+<!-- ============ 2페이지 ============ -->
+<div class="page" id="page-2" style="display:none;">
+<div class="wrap">
+  <h1>사진 분석 (수동 확인)</h1>
+  <p class="subtitle">MT4 캡처 3장을 올려두고 차트에서 읽은 값을 직접 입력해, 자동 차트와 결과가 맞는지 대조해볼 때 사용합니다.</p>
+
+  <label class="batch-upload">
+    <input type="file" accept="image/*" multiple onchange="handleBatchImages(event)">
+    <div style="font-size:22px;">📎</div>
+    <p class="title">사진 3장 한번에 올리기</p>
+    <p class="desc">선택한 순서대로 5M → 15M → 1H에 자동 배치됩니다</p>
+  </label>
+
+  <div class="top-actions">
+    <button class="reset-btn" onclick="resetManual()">↺ 전체 초기화</button>
+  </div>
+
+  <div class="tf-grid" id="manual-grid"></div>
+
+  <div class="cascade">
+    <div class="step-row">
+      <div class="step-num" id="m-stepnum-1">1</div>
+      <div class="step-body">
+        <p class="step-title">1H 방향 필터 (추세)</p>
+        <p class="step-detail" id="m-step1-detail">1H 값을 입력하세요.</p>
+      </div>
+      <div class="step-status" id="m-step1-status">대기</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num" id="m-stepnum-2">2</div>
+      <div class="step-body">
+        <p class="step-title">15M 셋업 확인</p>
+        <p class="step-detail" id="m-step2-detail">1단계가 먼저 통과해야 확인합니다.</p>
+      </div>
+      <div class="step-status" id="m-step2-status">대기</div>
+    </div>
+    <div class="step-row">
+      <div class="step-num" id="m-stepnum-3">3</div>
+      <div class="step-body">
+        <p class="step-title">5M 정밀 타점</p>
+        <p class="step-detail" id="m-step3-detail">2단계가 먼저 통과해야 확인합니다.</p>
+      </div>
+      <div class="step-status" id="m-step3-status">대기</div>
+    </div>
+  </div>
+
+  <div class="summary" style="margin-bottom:12px;">
+    <p class="label">15M 단기 매매 기회 (참고용)</p>
+    <p class="scalp-text" id="m-scalp-signal">값을 입력하세요.</p>
+  </div>
+
+  <div class="summary">
+    <p class="label">최종 판단</p>
+    <p class="final-verdict" id="m-final-verdict">값을 입력하세요.</p>
+  </div>
+</div>
+</div>
+
+<!-- ============ 3페이지 ============ -->
+<div class="page" id="page-3" style="display:none;">
+<div class="wrap">
+  <h1>나의 단계</h1>
+  <p class="subtitle">자본이 늘어남에 따라 포지션(랏)을 키워가는 단계별 계획입니다. 현재 자본을 입력하면 지금 어느 단계에 있는지, 다음 단계까지 얼마가 남았는지 자동으로 표시됩니다.</p>
+
+  <div class="param-card">
+    <div class="param-row">
+      <label class="param-field"><span>현재 자본 ($)</span>
+        <input type="number" id="cur-capital" value="100" oninput="renderStages()"></label>
+      <label class="param-field"><span>회당 익절 (포인트)</span>
+        <input type="number" id="p-tp" value="12" oninput="renderStages()"></label>
+      <label class="param-field"><span>회당 손절 (포인트)</span>
+        <input type="number" id="p-sl" value="18" oninput="renderStages()"></label>
+      <label class="param-field"><span>월 거래일수</span>
+        <input type="number" id="p-days" value="20" oninput="renderStages()"></label>
+    </div>
+  </div>
+
+  <div class="stage-now">
+    <p style="font-size:12px;color:#8a887f;margin:0;">현재 단계</p>
+    <p class="big" id="stage-now-title">-</p>
+    <p class="sub" id="stage-now-sub">현재 자본을 입력하세요.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table class="stage">
+      <thead>
+        <tr>
+          <th>단계</th>
+          <th>월초 자본</th>
+          <th>포지션</th>
+          <th>회당 수익</th>
+          <th>월 수익</th>
+          <th>월말 자본</th>
+          <th>회당 손절</th>
+          <th>손절 후 잔액</th>
+          <th>잔여 비율</th>
+        </tr>
+      </thead>
+      <tbody id="stage-body"></tbody>
+    </table>
+  </div>
+
+  <p class="disclaimer">
+    ※ 이 표는 매 거래가 계획대로 익절된다고 가정한 단순 계산입니다. 실제로는 손절도 발생하므로 그대로 실현되지 않습니다.<br>
+    ※ '잔여 비율'이 낮은 단계일수록 손절 한 번의 타격이 큽니다 — 특히 초반 단계에서 주의하세요.
+  </p>
+</div>
+</div>
+
+<script>
+/* =================== 공통 =================== */
+const OB = 78, OS = 22;
+const TFS = [
+  { key: '5M',  label: 'M5',  bucketMs: 5*60*1000,  show: 70 },
+  { key: '15M', label: 'M15', bucketMs: 15*60*1000, show: 60 },
+  { key: '1H',  label: 'H1',  bucketMs: 60*60*1000, show: 48 }
+];
+const CANDLES = {};
+let autoRefreshTimer = null;
+
+function showPage(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('page-'+i).style.display = (i===n) ? 'block' : 'none';
+    document.getElementById('tab-'+i).classList.toggle('active', i===n);
+  });
+  if (n === 1) TFS.forEach(drawMt4);
+}
+
+const sma = (arr, n) => {
+  const r = [];
+  for (let i = n-1; i < arr.length; i++) {
+    const s = arr.slice(i-n+1, i+1);
+    r.push(s.reduce((a,b)=>a+b,0)/s.length);
+  }
+  return r;
+};
+
+function calcStoch(candles, kPeriod, kSmooth, dSmooth) {
+  if (!candles || candles.length < kPeriod + kSmooth) return null;
+  const rawK = [];
+  for (let i = kPeriod-1; i < candles.length; i++) {
+    const win = candles.slice(i-kPeriod+1, i+1);
+    const hh = Math.max(...win.map(c=>c.h)), ll = Math.min(...win.map(c=>c.l));
+    rawK.push(hh===ll ? 50 : ((candles[i].c-ll)/(hh-ll))*100);
+  }
+  const kS = sma(rawK, kSmooth), dS = sma(kS, dSmooth);
+  if (!kS.length || !dS.length) return null;
+  return { k:kS, d:dS, kLast:kS[kS.length-1], dLast:dS[dS.length-1] };
+}
+
+function stateFrom(k, d) {
+  if (k == null || d == null) return null;
+  return k > d ? '상승중' : (k < d ? '하락중' : '보합');
+}
+function zoneFrom(k) {
+  if (k == null) return null;
+  if (k >= OB) return '과매수';
+  if (k <= OS) return '과매도';
+  return '중립';
+}
+
+/* 공통 3단계 판정 — prefix로 자동('') / 수동('m-') 화면 구분 */
+function runCascade(prefix, vals, els) {
+  function setStep(n, status, detail) {
+    document.getElementById(prefix+'stepnum-'+n).className = 'step-num ' + (status==='pass'?'pass':status==='fail'?'fail':'');
+    const s = document.getElementById(prefix+'step'+n+'-status');
+    s.className = 'step-status ' + status;
+    s.textContent = status==='pass'?'통과':status==='fail'?'미충족':'대기';
+    document.getElementById(prefix+'step'+n+'-detail').textContent = detail;
+  }
+
+  const h833 = vals['1H'].s833, h1231 = vals['1H'].s1231;
+  const sH833 = stateFrom(h833.k, h833.d), sH1231 = stateFrom(h1231.k, h1231.d);
+  let bias = null;
+
+  if (!sH833 || !sH1231) {
+    setStep(1, 'wait', '1H 값이 아직 없습니다.');
+  } else if (sH833 === sH1231) {
+    bias = sH833;
+    setStep(1, 'pass', `1H 8.3.3·12.3.12 방향 일치(${bias}) → ${bias==='상승중'?'매수':'매도'} 방향만 아래 단계에서 확인합니다.`);
+  } else {
+    const still = (sH1231==='상승중' && h1231.k > 50) || (sH1231==='하락중' && h1231.k < 50);
+    if (still) {
+      bias = sH1231;
+      setStep(1, 'pass', `1H 8.3.3(${sH833})만 일시적으로 반대 — 12.3.12(${h1231.k.toFixed(1)})는 50선 기준 ${bias} 유지 → 잔파도로 판단, 추세 유지.`);
+    } else {
+      setStep(1, 'fail', `1H 8.3.3(${sH833}) ↔ 12.3.12(${sH1231}) 엇갈리고 12.3.12도 50선 근처로 약화 → 추세전환 가능성, 관망.`);
+    }
+  }
+
+  const m833 = vals['15M'].s833, m1231 = vals['15M'].s1231;
+  const s15a = stateFrom(m833.k, m833.d), s15b = stateFrom(m1231.k, m1231.d);
+  let setupOk = false;
+  if (!bias) setStep(2, 'wait', '1단계가 통과해야 확인합니다.');
+  else if (!s15a || !s15b) setStep(2, 'wait', '15M 값이 아직 없습니다.');
+  else if (s15a === s15b && s15a === bias) {
+    setupOk = true;
+    setStep(2, 'pass', `15M 8.3.3·12.3.12 모두 1H와 같은 방향(${bias}) → 셋업 완료.`);
+  } else if (s15a !== s15b) {
+    setStep(2, 'fail', `15M 8.3.3(${s15a}) ↔ 12.3.12(${s15b}) 미확인(엇갈림) → 대기.`);
+  } else {
+    setStep(2, 'fail', `15M 방향(${s15a})이 1H 방향(${bias})과 반대 → 대기.`);
+  }
+
+  const f1231 = vals['5M'].s1231;
+  const s5 = stateFrom(f1231.k, f1231.d), z5 = zoneFrom(f1231.k);
+  let trigger = null;
+  if (!setupOk) setStep(3, 'wait', '2단계가 통과해야 확인합니다.');
+  else if (!s5) setStep(3, 'wait', '5M 값이 아직 없습니다.');
+  else {
+    const need = bias==='상승중' ? '과매도' : '과매수';
+    const against = bias==='상승중' ? '과매수' : '과매도';
+    if (s5 !== bias) setStep(3, 'fail', `5M 12.3.12 방향(${s5})이 1H 방향(${bias})과 반대 → 대기.`);
+    else if (z5 === against) setStep(3, 'fail', `5M 12.3.12가 이미 ${against} 구간(${f1231.k.toFixed(1)}) → 추격 진입 위험, 관망.`);
+    else if (z5 === need) {
+      trigger = 'high';
+      setStep(3, 'pass', `5M 12.3.12가 ${need} 구간(${f1231.k.toFixed(1)})에서 ${bias}로 전환 → 눌림목 진입 타이밍(신뢰도 높음). 예상 변동폭 약 15~25포인트.`);
+    } else {
+      trigger = 'normal';
+      setStep(3, 'pass', `5M 12.3.12가 ${need} 구간은 아니지만(${f1231.k.toFixed(1)}, 중립) ${bias} 방향 확인 → 추세추종 진입 타이밍(신뢰도 보통). 예상 변동폭 약 15~25포인트.`);
+    }
+  }
+
+  // 15M 단기 스캘핑
+  const scalp = els.scalp;
+  const z15 = zoneFrom(m1231.k);
+  if (!s15b) {
+    scalp.textContent = '15M 값이 아직 없습니다.';
+    scalp.className = 'scalp-text rec-neutral';
+  } else if (z15==='과매도' && s15b==='상승중') {
+    scalp.textContent = `🟢 15M 12.3.12가 과매도(${m1231.k.toFixed(1)})에서 반등 전환 → 단기 매수 기회 (짧게 치고 빠지는 자리, 크게 베팅 금물)`;
+    scalp.className = 'scalp-text rec-buy';
+  } else if (z15==='과매수' && s15b==='하락중') {
+    scalp.textContent = `🔴 15M 12.3.12가 과매수(${m1231.k.toFixed(1)})에서 하락 전환 → 단기 매도 기회 (짧게 치고 빠지는 자리, 크게 베팅 금물)`;
+    scalp.className = 'scalp-text rec-sell';
+  } else {
+    scalp.textContent = `뚜렷한 단기 전환 신호 없음 (15M 12.3.12: ${m1231.k.toFixed(1)}, ${z15} 구간, ${s15b})`;
+    scalp.className = 'scalp-text rec-neutral';
+  }
+
+  const fin = els.final;
+  const dir = bias==='상승중' ? '매수' : (bias==='하락중' ? '매도' : null);
+  if (trigger === 'high') {
+    fin.innerHTML = `🔥 ${dir} — 1H→15M→5M 전 단계 통과, 눌림목 타점 (승률 가장 높은 구간)<br><span style="font-size:13px;font-weight:500;color:#6b6a64;">세 시간대가 동시에 정렬된 경우라 한 파동(15~25p)에 그치지 않고 확장 랠리로 이어질 수 있습니다. 첫 파동에서 일부 익절 후 나머지는 추세 지속을 보며 대응하세요.</span>`;
+    fin.className = 'final-verdict ' + (dir==='매수'?'rec-buy':'rec-sell');
+  } else if (trigger === 'normal') {
+    fin.textContent = `${dir} — 1H→15M→5M 전 단계 통과, 추세추종 크로스 타점 (신뢰도 보통, 예상 변동폭 약 15~25포인트)`;
+    fin.className = 'final-verdict ' + (dir==='매수'?'rec-buy':'rec-sell');
+  } else if (!bias) {
+    fin.textContent = '관망 — 1H 방향이 불명확합니다.';
+    fin.className = 'final-verdict rec-neutral';
+  } else if (!setupOk) {
+    fin.textContent = `대기 — 1H는 ${dir} 방향이지만 15M 셋업이 아직 확인되지 않았습니다.`;
+    fin.className = 'final-verdict rec-neutral';
+  } else {
+    fin.textContent = `대기 — 15M까지 준비됐지만 5M 타점이 아직 안 왔습니다.`;
+    fin.className = 'final-verdict rec-neutral';
+  }
+}
+
+/* =================== 1페이지: 자동 차트 =================== */
+function buildChartCards() {
+  const host = document.getElementById('charts');
+  TFS.forEach(tf => {
+    const card = document.createElement('div');
+    card.className = 'chart-card';
+    card.innerHTML = `
+      <div class="chart-head">
+        <p class="chart-title">GOLD, ${tf.label}</p>
+        <span class="chart-readout" id="readout-${tf.key}">-</span>
+      </div>
+      <canvas class="mt4-canvas" id="canvas-${tf.key}"></canvas>`;
+    host.appendChild(card);
+  });
+}
+
+function normalizeTs(t) {
+  if (typeof t === 'string') return Date.parse(t);
+  return t < 1e12 ? t*1000 : t;
+}
+
+function buildCandles(points, bucketMs) {
+  const sorted = points.slice().sort((a,b)=>normalizeTs(a.t)-normalizeTs(b.t));
+  const out = [];
+  sorted.forEach(pt => {
+    const price = pt.p;
+    if (price == null || isNaN(price)) return;
+    const bucket = Math.floor(normalizeTs(pt.t)/bucketMs)*bucketMs;
+    const last = out[out.length-1];
+    if (!last || last.t !== bucket) out.push({t:bucket,o:price,h:price,l:price,c:price});
+    else { last.h=Math.max(last.h,price); last.l=Math.min(last.l,price); last.c=price; }
+  });
+  return out;
+}
+
+function fmtTime(ts, tfKey) {
+  const d = new Date(ts);
+  const p = n => String(n).padStart(2, '0');
+  if (tfKey === '1H') return `${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:00`;
+  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function drawMt4(tf) {
+  const canvas = document.getElementById(`canvas-${tf.key}`);
+  if (!canvas) return;
+  const candles = (CANDLES[tf.key] || []).slice(-tf.show);
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth || 600, cssH = 444;
+  canvas.style.height = cssH + 'px';
+  canvas.width = cssW*dpr; canvas.height = cssH*dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,cssW,cssH);
+
+  if (candles.length < 3) {
+    ctx.fillStyle = '#b8b6ac'; ctx.font='12px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('데이터를 불러오는 중입니다…', cssW/2, cssH/2);
+    return;
+  }
+
+  const padL = 6, padR = 54, plotW = cssW - padL - padR;
+  const priceH = 180, stochH = 105, gap = 8;
+  const priceTop = 4, s1Top = priceTop+priceH+gap, s2Top = s1Top+stochH+gap;
+  const s833 = calcStoch(candles,8,3,3), s1231 = calcStoch(candles,12,3,12);
+  const xFor = (i,n) => padL + (n<=1 ? plotW/2 : (i/(n-1))*plotW);
+
+  function frame(top,h){ ctx.strokeStyle='#dcdad1'; ctx.lineWidth=1; ctx.strokeRect(padL,top,plotW,h); }
+  function gridline(top,h,ratio,text){
+    const y = top + h - ratio*h;
+    ctx.strokeStyle='#eceae2'; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke();
+    ctx.setLineDash([]);
+    if (text!=null){ ctx.fillStyle='#9c9a90'; ctx.font='9.5px ui-monospace, Menlo, monospace';
+      ctx.textAlign='left'; ctx.fillText(text, padL+plotW+5, y+3); }
+  }
+
+  frame(priceTop, priceH);
+  ctx.fillStyle='#1a1a18'; ctx.font='11px ui-monospace, Menlo, monospace'; ctx.textAlign='left';
+  ctx.fillText(`GOLD, ${tf.label}`, padL+5, priceTop+13);
+
+  const hi = Math.max(...candles.map(c=>c.h)), lo = Math.min(...candles.map(c=>c.l));
+  const span = (hi-lo) || 1;
+  const yP = v => priceTop + priceH - ((v-lo)/span)*(priceH-26) - 13;
+  [0,0.25,0.5,0.75,1].forEach(r => {
+    const val = lo + span*r, y = yP(val);
+    ctx.strokeStyle='#f1efe8'; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+plotW,y); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#9c9a90'; ctx.font='9.5px ui-monospace, Menlo, monospace'; ctx.textAlign='left';
+    ctx.fillText(val.toFixed(2), padL+plotW+5, y+3);
+  });
+
+  const cw = Math.max(2, Math.min(9, plotW/candles.length*0.62));
+  candles.forEach((c,i) => {
+    const x = xFor(i, candles.length);
+    const col = (c.c >= c.o) ? '#1a8754' : '#e8503a';
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x,yP(c.h)); ctx.lineTo(x,yP(c.l)); ctx.stroke();
+    const yo=yP(c.o), yc=yP(c.c);
+    ctx.fillRect(x-cw/2, Math.min(yo,yc), cw, Math.max(1.5, Math.abs(yc-yo)));
+  });
+
+  const lastC = candles[candles.length-1].c, yLast = yP(lastC);
+  ctx.strokeStyle='#5b8def'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(padL,yLast); ctx.lineTo(padL+plotW,yLast); ctx.stroke();
+  ctx.fillStyle='#2f5fd0'; ctx.fillRect(padL+plotW+1, yLast-7, padR-3, 14);
+  ctx.fillStyle='#fff'; ctx.font='bold 9.5px ui-monospace, Menlo, monospace'; ctx.textAlign='left';
+  ctx.fillText(lastC.toFixed(2), padL+plotW+4, yLast+3);
+
+  function drawStochPanel(top, res, title) {
+    frame(top, stochH);
+    [1, OB/100, 0.5, OS/100, 0].forEach(r => {
+      const lbl = (r===OB/100) ? String(OB) : (r===OS/100) ? String(OS) : (r===1?'100':r===0?'0':null);
+      gridline(top, stochH, r, lbl);
+    });
+    ctx.fillStyle='#1a1a18'; ctx.font='11px ui-monospace, Menlo, monospace'; ctx.textAlign='left';
+    ctx.fillText(res ? `${title} ${res.kLast.toFixed(2)}  ${res.dLast.toFixed(2)}` : `${title} (데이터 부족)`, padL+5, top+13);
+    if (!res) return;
+    const n = Math.min(res.k.length, res.d.length);
+    const kk = res.k.slice(-n), dd = res.d.slice(-n);
+    const yS = v => top + stochH - (Math.max(0,Math.min(100,v))/100)*(stochH-20) - 10;
+    ctx.strokeStyle='#0f6e56'; ctx.lineWidth=1.6; ctx.setLineDash([4,3]);
+    ctx.beginPath(); dd.forEach((v,i)=>{const x=xFor(i,n); i?ctx.lineTo(x,yS(v)):ctx.moveTo(x,yS(v));}); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle='#e8503a'; ctx.lineWidth=2;
+    ctx.beginPath(); kk.forEach((v,i)=>{const x=xFor(i,n); i?ctx.lineTo(x,yS(v)):ctx.moveTo(x,yS(v));}); ctx.stroke();
+  }
+
+  drawStochPanel(s1Top, s833, 'Stoch(8,3,3)');
+  drawStochPanel(s2Top, s1231, 'Stoch(12,3,12)');
+
+  // ---- 시간축 (맨 아래) ----
+  const axisY = s2Top + stochH + 15;
+  ctx.fillStyle = '#8a887f';
+  ctx.font = '10px ui-monospace, Menlo, monospace';
+  const tickCount = Math.min(5, candles.length);
+  for (let j = 0; j < tickCount; j++) {
+    const idx = Math.round(j * (candles.length - 1) / (tickCount - 1 || 1));
+    const x = xFor(idx, candles.length);
+    ctx.strokeStyle = '#eceae2';
+    ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(x, priceTop); ctx.lineTo(x, s2Top + stochH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.textAlign = j === 0 ? 'left' : (j === tickCount - 1 ? 'right' : 'center');
+    ctx.fillText(fmtTime(candles[idx].t, tf.key), Math.max(padL, Math.min(padL + plotW, x)), axisY);
+  }
+
+  const lastT = candles[candles.length-1].t;
+  document.getElementById(`readout-${tf.key}`).textContent = (s833 && s1231)
+    ? `${fmtTime(lastT, tf.key)} · 8.3.3 ${s833.kLast.toFixed(2)}/${s833.dLast.toFixed(2)} · 12.3.12 ${s1231.kLast.toFixed(2)}/${s1231.dLast.toFixed(2)}`
+    : '데이터 부족';
+}
+
+function analyzeAuto() {
+  const vals = {};
+  let ready = true;
+  TFS.forEach(tf => {
+    const c = CANDLES[tf.key] || [];
+    const a = calcStoch(c,8,3,3), b = calcStoch(c,12,3,12);
+    if (!a || !b) ready = false;
+    vals[tf.key] = {
+      s833:  a ? {k:a.kLast, d:a.dLast} : {k:null,d:null},
+      s1231: b ? {k:b.kLast, d:b.dLast} : {k:null,d:null}
+    };
+  });
+  runCascade('', vals, {
+    scalp: document.getElementById('scalp-signal'),
+    final: document.getElementById('final-verdict')
+  });
+}
+
+async function fetchSpotAndFx() {
+  try {
+    const res = await fetch('https://xaus.com/api/v1/spot');
+    const data = await res.json();
+    const price = data.spot_usd_oz != null ? data.spot_usd_oz : (data.xau ? data.xau.price : null);
+    const now = new Date().toLocaleTimeString('ko-KR');
+    if (price != null) {
+      document.getElementById('price-gold').textContent = '$' + price.toFixed(2);
+      document.getElementById('price-gold-updated').textContent = now;
+    }
+    const fx = data.fx_rates || {};
+    if (fx.KRW) { document.getElementById('price-krw').textContent = fx.KRW.toFixed(2);
+                  document.getElementById('price-krw-updated').textContent = now; }
+    if (fx.CNY) { document.getElementById('price-cny').textContent = fx.CNY.toFixed(4);
+                  document.getElementById('price-cny-updated').textContent = now; }
+  } catch (e) {
+    document.getElementById('price-gold').textContent = '조회 실패';
+    document.getElementById('price-gold-updated').textContent = e.message;
+  }
+}
+
+async function fetchCandles() {
+  const status = document.getElementById('load-status');
+  try {
+    status.textContent = '차트 데이터 불러오는 중…';
+    const res = await fetch('https://xaus.com/api/v1/intraday?symbol=xau&hours=48');
+    const data = await res.json();
+    const points = data.points || [];
+    if (!points.length) throw new Error('데이터 없음');
+    TFS.forEach(tf => { CANDLES[tf.key] = buildCandles(points, tf.bucketMs); });
+    status.textContent = `${points.length}개 시세 포인트 반영됨`;
+    return true;
+  } catch (e) {
+    status.textContent = '차트 데이터 불러오기 실패: ' + e.message;
+    return false;
+  }
+}
+
+async function fetchAndUpdate() {
+  await fetchSpotAndFx();
+  const ok = await fetchCandles();
+  lastFetchAt = Date.now();
+  TFS.forEach(drawMt4);
+  if (ok) analyzeAuto();
+}
+
+function toggleAutoRefresh() {
+  const on = document.getElementById('auto-refresh-toggle').checked;
+  if (on) autoRefreshTimer = setInterval(fetchAndUpdate, 5*60*1000);
+  else if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
+}
+
+/* =================== 2페이지: 수동 분석 =================== */
+const SETTINGS = [{key:'833',label:'Stoch 8.3.3'},{key:'1231',label:'Stoch 12.3.12'}];
+
+function buildManualUI() {
+  const grid = document.getElementById('manual-grid');
+  TFS.forEach(tf => {
+    const card = document.createElement('div');
+    card.className = 'tf-card';
+    card.innerHTML = `
+      <h3>${tf.label} <span class="tf-badge" id="mbadge-${tf.key}">미입력</span></h3>
+      <label class="upload-box" id="mupload-${tf.key}">
+        <input type="file" accept="image/*" onchange="handleImage(event,'${tf.key}')">
+        <span class="placeholder">여기를 눌러<br>${tf.label} 차트 캡처 업로드</span>
+      </label>
+      <button class="clear-img" id="mclear-${tf.key}" onclick="clearImage('${tf.key}')">사진 지우기</button>
+      ${SETTINGS.map(s=>`
+        <div class="stoch-block">
+          <div class="stoch-label">${s.label}</div>
+          <div class="input-row">
+            <input type="number" step="0.01" inputmode="decimal" placeholder="메인" id="mmain-${tf.key}-${s.key}" oninput="analyzeManual()">
+            <input type="number" step="0.01" inputmode="decimal" placeholder="시그널" id="msig-${tf.key}-${s.key}" oninput="analyzeManual()">
+          </div>
+          <div class="mini-row">
+            <div class="mini-cell"><span class="mini-label">상태</span><span class="mini-val" id="mstate-${tf.key}-${s.key}">-</span></div>
+            <div class="mini-cell"><span class="mini-label">구간</span><span class="mini-val" id="mzone-${tf.key}-${s.key}">-</span></div>
+          </div>
+        </div>`).join('')}`;
+    grid.appendChild(card);
+  });
+}
+
+function setImageForTf(tfKey, dataUrl) {
+  const box = document.getElementById(`mupload-${tfKey}`);
+  box.innerHTML = `<img src="${dataUrl}" alt="${tfKey} 차트 캡처"><input type="file" accept="image/*" onchange="handleImage(event,'${tfKey}')" style="position:absolute;inset:0;opacity:0;cursor:pointer;">`;
+  document.getElementById(`mclear-${tfKey}`).style.display = 'block';
+  const b = document.getElementById(`mbadge-${tfKey}`);
+  b.textContent = '사진 첨부됨'; b.classList.add('filled');
+}
+function handleImage(evt, tfKey) {
+  const file = evt.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => setImageForTf(tfKey, e.target.result);
+  r.readAsDataURL(file);
+}
+function handleBatchImages(evt) {
+  Array.from(evt.target.files||[]).slice(0,TFS.length).forEach((file,i) => {
+    const r = new FileReader();
+    r.onload = e => setImageForTf(TFS[i].key, e.target.result);
+    r.readAsDataURL(file);
+  });
+  evt.target.value = '';
+}
+function clearImage(tfKey) {
+  const box = document.getElementById(`mupload-${tfKey}`);
+  box.innerHTML = `<input type="file" accept="image/*" onchange="handleImage(event,'${tfKey}')"><span class="placeholder">여기를 눌러<br>${tfKey} 차트 캡처 업로드</span>`;
+  document.getElementById(`mclear-${tfKey}`).style.display = 'none';
+  const b = document.getElementById(`mbadge-${tfKey}`);
+  b.textContent = '미입력'; b.classList.remove('filled');
+}
+function resetManual() {
+  TFS.forEach(tf => clearImage(tf.key));
+  document.querySelectorAll('#manual-grid input[type="number"]').forEach(i => i.value = '');
+  analyzeManual();
+}
+
+function analyzeManual() {
+  const vals = {};
+  TFS.forEach(tf => {
+    vals[tf.key] = {};
+    SETTINGS.forEach(s => {
+      const mEl = document.getElementById(`mmain-${tf.key}-${s.key}`);
+      const dEl = document.getElementById(`msig-${tf.key}-${s.key}`);
+      const k = mEl.value==='' ? null : parseFloat(mEl.value);
+      const d = dEl.value==='' ? null : parseFloat(dEl.value);
+      const key = s.key==='833' ? 's833' : 's1231';
+      vals[tf.key][key] = {k, d};
+
+      const st = stateFrom(k,d), zn = zoneFrom(k);
+      const stEl = document.getElementById(`mstate-${tf.key}-${s.key}`);
+      const znEl = document.getElementById(`mzone-${tf.key}-${s.key}`);
+      stEl.textContent = st || '-';
+      stEl.className = 'mini-val ' + (st==='상승중'?'rec-buy':st==='하락중'?'rec-sell':'rec-neutral');
+      znEl.textContent = zn || '-';
+      znEl.className = 'mini-val';
+    });
+  });
+  runCascade('m-', vals, {
+    scalp: document.getElementById('m-scalp-signal'),
+    final: document.getElementById('m-final-verdict')
+  });
+}
+
+/* =================== 3페이지: 나의 단계 =================== */
+const LOTS = [2, 5, 10, 50, 100, 500, 1000, 1000, 1000, 1000, 1000, 1000];
+const START_CAPITAL = 100;
+
+function computeStages() {
+  const tp = parseFloat(document.getElementById('p-tp').value) || 0;
+  const sl = parseFloat(document.getElementById('p-sl').value) || 0;
+  const days = parseFloat(document.getElementById('p-days').value) || 0;
+  const rows = [];
+  let start = START_CAPITAL;
+  LOTS.forEach((lot, i) => {
+    const perTrade = tp * lot;
+    const monthly = perTrade * days;
+    const end = start + monthly;
+    const stopLoss = -(sl * lot);
+    const afterStop = start + stopLoss;
+    rows.push({
+      stage: i+1, start, lot, perTrade, monthly, end,
+      stopLoss, afterStop, pct: start ? afterStop/start : 0
+    });
+    start = end;
+  });
+  return rows;
+}
+
+const fmt = n => Math.round(n).toLocaleString('ko-KR');
+
+function renderStages() {
+  const rows = computeStages();
+  const capital = parseFloat(document.getElementById('cur-capital').value);
+  const body = document.getElementById('stage-body');
+  body.innerHTML = '';
+
+  let curIdx = -1;
+  if (!isNaN(capital)) {
+    for (let i = 0; i < rows.length; i++) {
+      if (capital >= rows[i].start) curIdx = i; else break;
+    }
+  }
+
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    if (i === curIdx) tr.className = 'current';
+    else if (curIdx > -1 && i < curIdx) tr.className = 'done';
+    const pctCls = r.pct < 0.8 ? 'risk-warn' : 'risk-ok';
+    tr.innerHTML = `
+      <td>${r.stage}</td>
+      <td>${fmt(r.start)}</td>
+      <td>${r.lot}</td>
+      <td>${fmt(r.perTrade)}</td>
+      <td>${fmt(r.monthly)}</td>
+      <td>${fmt(r.end)}</td>
+      <td class="risk-warn">${fmt(r.stopLoss)}</td>
+      <td>${fmt(r.afterStop)}</td>
+      <td class="${pctCls}">${(r.pct*100).toFixed(1)}%</td>`;
+    body.appendChild(tr);
+  });
+
+  const title = document.getElementById('stage-now-title');
+  const sub = document.getElementById('stage-now-sub');
+  if (curIdx === -1) {
+    title.textContent = '아직 1단계 미만';
+    sub.textContent = `1단계 시작 자본은 $${fmt(rows[0].start)} 입니다.`;
+  } else {
+    const r = rows[curIdx];
+    title.textContent = `${r.stage}단계 · 포지션 ${r.lot}`;
+    const next = rows[curIdx+1];
+    const parts = [
+      `회당 익절 시 +$${fmt(r.perTrade)}, 손절 시 -$${fmt(Math.abs(r.stopLoss))} (자본의 ${(100-r.pct*100).toFixed(1)}%)`
+    ];
+    if (next) {
+      const remain = next.start - capital;
+      parts.push(remain > 0
+        ? `다음 ${next.stage}단계(포지션 ${next.lot})까지 $${fmt(remain)} 남음 — 익절 약 ${Math.ceil(remain / r.perTrade)}회 분량`
+        : `이미 ${next.stage}단계 진입 조건을 넘었습니다.`);
+    } else {
+      parts.push('최종 단계입니다.');
+    }
+    if (r.pct < 0.8) parts.push('⚠️ 이 단계는 손절 한 번의 타격이 자본 대비 큽니다. 신호가 확실할 때만 진입하세요.');
+    sub.innerHTML = parts.join('<br>');
+  }
+}
+
+let lastFetchAt = null;
+
+function tickClock() {
+  const now = new Date();
+  const p = n => String(n).padStart(2,'0');
+  let txt = `${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())} ${p(now.getHours())}:${p(now.getMinutes())}:${p(now.getSeconds())}`;
+  if (lastFetchAt) {
+    const sec = Math.floor((Date.now() - lastFetchAt) / 1000);
+    const ago = sec < 60 ? `${sec}초 전 갱신` : `${Math.floor(sec/60)}분 전 갱신`;
+    txt += `  ·  ${ago}`;
+  }
+  document.getElementById('live-clock').textContent = txt;
+}
+
+/* =================== 초기화 =================== */
+window.addEventListener('resize', () => TFS.forEach(drawMt4));
+tickClock();
+setInterval(tickClock, 1000);
+buildChartCards();
+buildManualUI();
+renderStages();
+analyzeManual();
+fetchAndUpdate();
+</script>
+</body>
+</html>
